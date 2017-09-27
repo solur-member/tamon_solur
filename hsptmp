@@ -1,0 +1,604 @@
+mmload "sound\\logo.wav",0
+sc=1
+mmplay 0
+repeat 500
+screen 0,sc,sc
+sc+=1
+loop
+color 0,0,0
+pos 200,250
+mes "Tamon Gaming"
+wait 1000
+;全変数初期化
+stage=1
+score=0
+*start
+picload "image\\loading.jpg"
+title "Loading..."
+savecnt=10000
+sht=0
+eney=0
+eney2=0
+eney3=0
+eney4=0
+die=0
+randomize
+enemyx=rnd(641)
+enemyx2=rnd(641)
+enemyx3=rnd(641)
+enemyx4=rnd(641)
+Resurrection=0
+ene1=1
+ene2=1
+ene3=1
+ene4=1
+eneResu=0
+eneResu2=0
+eneResu3=0
+eneResu4=0
+if stage>1 : return
+;効果音は一字、BGMは100＋一字
+HP=3
+mmload "sound\\start.mp3",0,2
+mmload "sound\\BGM.mp3",101,1
+mmload "sound\\GAME OVER.mp3",102,1
+mmload "sound\\GAME CLEAR.mp3",103,2
+mmload "sound\\shoot1.wav",1,0
+mmload "sound\\explosion1.wav",2,0
+mmload "sound\\boss battle.mp3",104,1
+mmload "sound\\explosion2.mp3",3,0
+mmload "sound\\hit.wav",4,0
+mmload "sound\\titleBGM.mp3",105,1
+mmload "sound\\endingBGM.mp3",106,1
+mmload "sound\\last boss battle.mp3",107,1
+
+
+celload "image\\my.png"
+celload "image\\bom.png",3
+celload "image\\enemy.png",4
+celload "image\\enemy2.png",5
+celload "image\\enemy3.png",6
+celload "image\\enemy4.png",7
+celload "image\\laser.png",8
+celload "image\\enemyball.png",9
+celload "image\\boss.gif",10
+celload "image\\bossball.png",11
+celload "image\\boss2.gif",12
+celload "image\\last boss.gif",13
+
+buffer 100,640,480
+color 0,0,0
+boxf
+color 255,255,255
+repeat 30
+pset rnd(641),rnd(481)
+loop
+;タイトル
+mmplay 105
+screen 0,640,480
+notesel save
+noteload "save/save.txt",1
+title "Shooting by tamon"
+cls
+picload "image\\title.png"
+repeat
+	stick key
+	if key&$30 {
+	if save=1 {
+		dialog "ロードしますか？",2
+		if stat=6 {
+			notesel loadscore
+			noteload "save/score.txt"
+			score=int(loadscore)
+			notesel loadHP
+			noteload "save/HP.txt"
+			HP=int(loadHP)
+			notesel loadBoss
+			noteload "save/boss.txt"
+			boss=int(loadBoss)
+			notesel loadstage
+			noteload "save/stage.txt"
+			stage=int(loadstage)
+			notesel loadcnt
+			noteload "save/cnt.txt"
+			savecnt=loadcnt
+			dialog "ロードしました。" } }
+		mmplay 0
+		break}
+	if key=128 : end
+	await 24
+loop
+
+if boss=1 : goto *bossbattle
+*main
+	saveHP=HP ;セーブ時に使用
+	screen 0,640,480
+	boss=0
+	mx=250
+	mmplay 101
+	repeat
+	redraw 0
+	pos 0,0
+	celput 100
+	color 255,255,255
+	pos mx,300
+	if die=0 {
+	celput 1
+}else{
+	Resurrection+=1
+	if HP=0 { savecnt=int(savecnt)-cnt
+	goto *gmovr }
+	if Resurrection=100 { die=0
+	Resurrection=0}
+}
+	stick key,5
+	if key=4 : mx+=5
+	if key=1 : mx-=5
+	if key=16 : if sht=0 and die=0 : gosub *shoot
+	if key=128 : end
+	
+	if sht=1 : gosub *lasermove
+	if ene1=1 : gosub *enemymove1
+	if ene2=1 : gosub *enemymove2
+	if ene3=1 : gosub *enemymove3
+	if ene4=1 : gosub *enemymove4
+	if ene1=0 : eneResu+=1
+	if ene2=0 : eneResu2+=1
+	if ene3=0 : eneResu3+=1
+	if ene4=0 : eneResu4+=1
+	if eneResu=100 { eneResu=0
+	ene1=1 }
+	if eneResu2=100 { eneResu2=0
+	ene2=1 }
+	if eneResu3=100 { eneResu3=0
+	ene3=1 }
+	if eneResu4=100 { eneResu4=0
+	ene4=1 }   
+	if enesht=0 & ene4=1 : gosub *eneshoot
+	if enesht=1 : gosub *esmove
+	pos 0,0
+	font "",30
+	mes "残機"+HP
+	mes "score"+score
+	mes "ボス戦まで残り"+(int(savecnt)-cnt)
+	if cnt=int(savecnt) : goto *bossbattle
+	mes "stage"+stage
+	redraw 1
+	await 24
+	loop
+
+*enemymove1
+	if eney>480 { eney=0
+	enemyx=rnd(641)
+	return
+} else {
+	pos enemyx,eney
+	celput 6
+	eney+=2*stage
+	if (abs(mx-enemyx)<70)&(abs(300-eney)<70)&die=0 : gosub *damage
+	if (abs(enemyx-laserx)<70)&(abs(eney-lasery)<70)&sht=1 { bomx=enemyx
+	bomy=eney
+	ene1=0
+	enemyx=rnd(641)
+	eney=0
+	gosub *hit }
+}
+	return
+*enemymove2
+	if eney2>480 { eney2=0
+	enemyx2=rnd(641)
+	return
+	} else {
+	enemyx2+=sin(eney2/30)*10
+	pos enemyx2,eney2
+	celput 4
+	eney2+=2*stage
+	if (abs(mx-enemyx2)<70)&(abs(300-eney2)<70)&die=0 : gosub *damage
+	if (abs(enemyx2-laserx)<70)&(abs(eney2-lasery)<70)&sht=1 { bomx=enemyx2
+	bomy=eney2
+	ene2=0
+	enemyx2=rnd(641)
+	eney2=0
+	gosub *hit }
+}
+	return
+*enemymove3
+	if eney3>480 { eney3=0
+	enemyx3=rnd(641)
+	return
+	} else {
+	enemyx3+=cos(eney3/30)*10
+	pos enemyx3,eney3
+	celput 5
+	eney3+=2*stage
+	if (abs(mx-enemyx3)<70)&(abs(300-eney3)<70)&die=0 : gosub *damage
+	if (abs(enemyx3-laserx)<70)&(abs(eney3-lasery)<70)&sht=1 { bomx=enemyx3
+	bomy=eney3
+	ene3=0
+	enemyx3=rnd(641)
+	eney3=0
+	gosub *hit }
+}
+	return
+*enemymove4
+	if eney4>480 { eney4=0
+	enemyx4=rnd(641)
+	return
+} else {
+	pos enemyx4,eney4
+	celput 7
+	eney4+=2*stage
+	if (abs(mx-enemyx4)<50)&(abs(300-eney4)<50)&die=0 : gosub *damage
+	if (abs(enemyx4-laserx)<70)&(abs(eney4-lasery)<70)&sht=1 { bomx=enemyx4
+	bomy=eney4
+	ene4=0
+	enemyx4=rnd(641)
+	eney4=0
+	gosub *hit }
+}
+	return
+*damage
+	redraw 0
+	mmplay 2
+	color 255
+	pos mx-50,250
+	celput 3
+	redraw 1
+	die=1
+	HP-=1
+	await 50
+	return
+*shoot
+	;このプログラムはlasermove命令を実行する準備をするものであり、このプログラムだけでレーザーが発射されるわけではない。
+	mmplay 1
+	sht=1
+	laserx=mx+31
+	lasery=300
+*lasermove
+	;これで撃つ
+	pos laserx,lasery
+	celput 8
+	lasery-=10
+	if lasery<0 : sht=0
+	return
+*eneshoot
+	;▽の攻撃
+	enesht=1
+	esx=enemyx4+35
+	esy=eney4
+*esmove
+	pos esx,esy
+	celput 9
+	esy+=5*stage
+	if esy>480 : enesht=0
+	if (abs(mx-esx)<50)&(abs(300-esy)<50)&die=0 : gosub *damage
+	return
+*hit
+	score+=100
+	redraw 0
+	mmplay 2
+	color 255
+	pos bomx-50,bomy
+	celput 3
+	redraw 1
+	await 50
+	color 255,255,255
+	return
+*gmovr
+	mmstop
+	cls
+	boxf
+	wait 100
+	mmplay 102
+	color 255,255,255
+	font "",100
+	pos 50,170
+	mes "GAME OVER"
+	repeat
+	stick key
+	if key!0 { dialog "セーブしますか？",2
+	if stat=6 { notesel save
+	noteadd "1",0,1
+	notesave "save/save.txt"
+	noteadd ""+score+"",0,1
+	notesave "save/score.txt"
+	noteadd ""+saveHP+"",0,1
+	notesave "save/HP.txt"
+	noteadd ""+boss+"",0,1
+	notesave "save/boss.txt" 
+	noteadd ""+stage+"",0,1
+	notesave "save/stage.txt"
+	noteadd ""+savecnt+"",0,1
+	notesave "save/cnt.txt"
+	dialog "セーブしました。" }
+	dialog "replay?",2
+	if stat=6 { dialog "タイトル画面に戻ります。"
+	stage=1
+	goto *start
+}else{ dialog "ゲームを終了します。"
+end } }
+await 24
+loop
+*bossbattle
+	boss=1
+if stage=1 {
+	mmplay 104
+	title "shooting by tamon"
+	HPsave=HP ;トータル入手時に使用
+	HP=5
+	bossHP=30
+BOSSX=100
+BOSSSHT=0
+SCREEN 0,640,480
+BOSSKAKUDO=1
+REPEAT
+redraw 0
+pos 0,0
+celput 100
+IF BOSSKAKUDO=1 : BOSSX+=10
+IF BOSSKAKUDO=0 : BOSSX-=10
+POS BOSSX,0
+COLOR 255,255,255
+CELPUT 10
+IF BOSSX>640 : BOSSKAKUDO=0
+IF BOSSX<0 : BOSSKAKUDO=1
+pos mx,300
+if die=0 {
+	celput 1
+}else{
+	Resurrection+=1
+	if HP=0 : goto *gmovr
+	if Resurrection=100 { die=0
+	Resurrection=0}
+}
+POS 0,0
+FONT "",30
+MES "残機"+HP
+mes "ボスHP"+bossHP
+mes "stage"+stage
+STICK KEY,5
+IF KEY=4 : mX+=10
+IF KEY=1 : mX-=10
+if key=16 : if sht=0 and die=0 : gosub *shoot
+if sht=1 : gosub *lasermove
+GOSUB *BOSSATTACK
+IF ((ABS (BossX-laserX))<70)AND((ABS(0-lasery))<70)&sht=1 { mmplay 4
+	bossHP-=1
+	sht=0 }
+	if bossHP=0 : goto *bossdie
+redraw 1
+AWAIT 10
+LOOP }
+
+
+
+
+
+if stage=2 {
+	boss=1
+	mmplay 104
+	title "shooting by tamon"
+	HPsave=HP
+	HP=7
+	bossHP=50
+BOSSX=100
+BOSSSHT=0
+SCREEN 0,640,480
+REPEAT
+bossxspeed+=2
+redraw 0
+pos 0,0
+celput 100
+bossx+=sin(bossxspeed/30-5)*30
+POS BOSSX,0
+COLOR 255,255,255
+CELPUT 12
+pos mx,300
+if die=0 {
+	celput 1
+}else{
+	Resurrection+=1
+	if HP=0 : goto *gmovr
+	if Resurrection=100 { die=0
+	Resurrection=0}
+}
+POS 0,0
+FONT "",30
+MES "残機"+HP
+mes "ボスHP"+bossHP
+mes "stage"+stage
+STICK KEY,5
+IF KEY=4 : mX+=10
+IF KEY=1 : mX-=10
+if key=16 : if sht=0 and die=0 : gosub *shoot
+if sht=1 : gosub *lasermove
+GOSUB *BOSSATTACK
+IF ((ABS (BossX-laserX))<70)AND((ABS(0-lasery))<70)&sht=1 { mmplay 4
+	bossHP-=1
+	sht=0 }
+	if bossHP=0 : goto *bossdie
+redraw 1
+AWAIT 10
+LOOP }
+
+
+
+
+
+if stage=3 {
+	boss=1
+	randomize 21
+	repeat 30
+	ballx(cnt)=300
+	bally(cnt)=0
+	xspeed(cnt)=rnd(21)-10
+	yspeed(cnt)=rnd(4)+1
+	loop
+	mmplay 107
+	title "shooting by tamon"
+	HPsave=HP
+	HP=10
+	bossHP=100
+SCREEN 0,640,480
+REPEAT
+redraw 0
+pos 0,0
+celput 100
+POS 200,0
+COLOR 255,255,255
+CELPUT 13
+pos mx,300
+if die=0 {
+	celput 1
+}else{
+	Resurrection+=1
+	if HP=0 : goto *gmovr
+	if Resurrection=100 { die=0
+	Resurrection=0}
+}
+POS 0,0
+FONT "",30
+MES "残機"+HP
+mes "ボスHP"+bossHP
+mes "stage"+stage
+STICK KEY,5
+IF KEY=4 : mX+=10
+IF KEY=1 : mX-=10
+if key=16 : if sht=0 and die=0 : gosub *shoot
+if sht=1 : gosub *lasermove
+repeat 30
+ballx(cnt)+=xspeed(cnt)
+bally(cnt)+=yspeed(cnt)
+if ballx(cnt)=0 or ballx(cnt)>660 { ballx(cnt)=300
+bally(cnt)=0 }
+if bally(cnt)>500 { bally(cnt)=0
+ballx(cnt)=300 }
+pos ballx(cnt),bally(cnt)
+IF ((ABS (BALLX(cnt)-mX))<10)AND((ABS(BALLY(cnt)-300))<10)&die=0 : GOSUB*DAMAGE
+celput 9
+loop
+IF ((ABS (200-laserX))<200)AND((ABS(0-lasery))<200)&sht=1&mx>140 { mmplay 4
+	bossHP-=1
+	sht=0 }
+	if bossHP=0 : goto *bossdie
+redraw 1
+AWAIT 10
+LOOP }
+
+
+
+
+
+*BOSSATTACK
+if stage=1 {
+	IF BOSSSHT=0 { BALLX=BOSSX
+	BALLY=0
+	BOSSSHT=1
+}ELSE{BALLY+=10
+POS BALLX,BALLY
+celput 11
+IF BALLY>480 : BOSSSHT=0
+IF ((ABS (BALLX-mX))<70)AND((ABS(BALLY-300))<70)&die=0 : GOSUB*DAMAGE
+} }
+
+
+
+
+
+if stage=2 {
+	IF BOSSSHT=0 { BALLX=bossx
+	BALLY=0
+	BOSSSHT=1
+}ELSE{BALLY+=10
+ballx+=sin(bally/30)*50
+POS BALLX,BALLY
+celput 11
+IF BALLY>480 : BOSSSHT=0
+IF ((ABS (BALLX-mX))<70)AND((ABS(BALLY-300))<70)&die=0 : GOSUB*DAMAGE
+} }
+RETURN
+*bossdie
+	white=0
+	mmplay 3
+	buffer 200,640,480
+	color 255,255,255
+	boxf
+	screen 0,640,480
+	color 0,0,0
+	boxf
+	repeat 255
+	gmode gmode_alpha,640,480,white
+	gcopy 200
+	white+=1
+	await 10
+	loop
+	buffer 200,640,480
+	color 0,0,0
+	boxf
+	screen 0,640,480
+	color 255,255,255
+	boxf
+	white=0
+	repeat 255
+	gmode gmode_alpha,640,480,white
+	gcopy 200
+	white+=1
+	await 10
+	loop
+	pos 240,150
+	mes "stage"+stage+"clear"
+	pos 240,180
+	mes "total"
+	pos 240,210
+	mes "score"+score+"+"+200
+	score+=200
+	pos 240,240
+	mes "="+score
+	pos 240,270
+	mes "残機"+HP+"回復！！"
+	HP+=HPsave
+	mmplay 103
+	if stage!3 {
+	stage+=1 ;一旦変数を初期化
+	gosub *start:goto *main } 
+*clear
+	noteadd "0",0,1
+	notesave "save/save.txt"
+	mmplay 106
+	dialog "*credit*"
+	dialog "*image* ミニドット絵メーカー"
+	dialog "http://neutralx0.net/dot/"
+	dialog "ミニドット絵メーカー2"
+	dialog "http://neutralx0.net/tool/dot2/"
+	dialog "*sound* 魔王魂"
+	dialog "http://maoudamashii.jokersounds.com/"
+	dialog "PANICPUMPKIN"
+	dialog "http://pansound.com/panicpumpkin/"
+	dialog "WavePad 音声編集ソフト"
+	dialog "http://www.nch.com.au/wavepad/jp/index.html?gclid=Cj0KCQjwgIPOBRDnARIsAHA1X3QESDTRnRSQvS5b9JsD8qalHU-jT4uU4idAMfk7MWsTkePiuns8zYsaAvXwEALw_wcB"
+	dialog "SoundEngine"
+	dialog "http://forest.watch.impress.co.jp/library/software/soundengine/"
+	dialog "Switch 音声ファイル変換ソフト"
+	dialog "http://www.nch.com.au/switch/jp/index.html?gclid=Cj0KCQjwgIPOBRDnARIsAHA1X3TZaFAGCGB1NMOR0HOYfCpNVCN9eJ-1JeKNAuYLjU2NggJIO5qkiwoaAhfBEALw_wcB"
+	dialog "final total"
+	dialog "score"+score+"+"+"HP"+HP+"×300 "
+	score+=HP*300
+	dialog "="+score
+	notesel hisc
+	noteload "save/high score.txt"
+	dialog "high score"+hisc
+	dialog "your score"+score+" high score"+hisc
+	if int(hisc)<score { noteadd ""+score+"",0,1
+	notesave "save/high score.txt"
+	dialog "ハイスコア更新！！"
+	}
+	dialog "おめでとうございます！！",0
+	dialog "あなたはボスを倒し、このゲームをクリアしました！！",0
+	dialog "あなたはもう一度このゲームを遊ぶことができます。",0
+	dialog "もう一度このゲームを遊びますか？",2
+	if stat=6 { dialog "ではもう一度、どうぞ"
+	mmstop
+	stage=1
+	goto *start
+}else{dialog "Thank you for playing!!",0
+end }
